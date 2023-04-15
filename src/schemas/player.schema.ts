@@ -18,7 +18,7 @@ export class Player extends Document {
   WPM: number;
 
   @Prop()
-  nickName: string;
+  nickname: string;
 }
 
 export const PlayerSchema = SchemaFactory.createForClass(Player);

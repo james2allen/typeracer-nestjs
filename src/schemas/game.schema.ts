@@ -2,6 +2,8 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 import { Player } from './player.schema';
 
+export type GameDocument = Game & Document;
+
 @Schema()
 export class Game extends Document {
   @Prop([String])
@@ -19,3 +21,5 @@ export class Game extends Document {
   @Prop()
   startTime: number;
 }
+
+export const GameSchema = SchemaFactory.createForClass(Game);

@@ -9,8 +9,8 @@ export class PlayerService {
     @InjectModel(Player.name) private playerModel: Model<PlayerDocument>,
   ) {}
 
-  async create(product: Player): Promise<Player> {
-    const newPlayer = new this.playerModel(Player);
+  async create(player: Player): Promise<Player> {
+    const newPlayer = new this.playerModel(player);
     return newPlayer.save();
   }
 

@@ -5,13 +5,10 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Injectable } from '@nestjs/common';
-import { PlayerService } from 'src/services/player.service';
-import { GameService } from 'src/services/game.service';
-import { QuotableService } from 'src/services/quotable.service';
-import { Game } from 'src/schemas/game.schema';
-import { Player } from 'src/schemas/player.schema';
-
-const QuotableAPI = require('./QuotableAPI');
+import { PlayerService } from 'src/players/player.service';
+import { GamesService } from 'src/games/games.service';
+import { QuotableService } from 'src/quotable/quotable.service';
+import { Player } from 'src/players/player.schema';
 
 interface TimerPayload {
   gameID: string;
@@ -24,15 +21,10 @@ interface JoinGamePayload {
 }
 
 @Injectable()
-@WebSocketGateway(80, {
-  cors: {
-    origin: 'http://localhost:3000',
-  },
-})
-export class GameGateway {
+@WebSocketGateway(3001, { cors: true })
+export class GamesGateway {
   constructor(
-    private playerService: PlayerService,
-    private gameService: GameService,
+    private gameService: GamesService,
     private quotableService: QuotableService,
   ) {}
 
@@ -42,19 +34,22 @@ export class GameGateway {
   @SubscribeMessage('create-game')
   async createGame(client: Socket, nickname: string): Promise<void> {
     try {
-      const quotableData = await this.quotableService.getQuote();
-      let game = new Game();
-      game.words = quotableData;
+      const words = await this.quotableService.getQuote();
+      console.log('here 1');
+      let game = await this.gameService.createGame(words);
+
       let player = new Player({
         socketID: client.id,
         isPartyLeader: true,
         nickname,
       });
       game.players.push(player);
-      game = await this.gameService.create(game);
 
-      const gameID = game._id.toString();
+      game = await this.gameService.updateGame(game.id, game);
+
+      const gameID = game.id;
       client.join(gameID);
+
       this.server.to(gameID).emit('update-game', game);
     } catch (error) {
       console.log(error);
@@ -64,7 +59,7 @@ export class GameGateway {
   @SubscribeMessage('timer')
   async startTimer(client: Socket, payload: TimerPayload): Promise<void> {
     let countDown = 5;
-    let game = await this.gameService.readById(payload.gameID);
+    let game = await this.gameService.getGameById(payload.gameID);
     let player = game.players.find((player) => player.id === payload.playerID);
     if (player.isPartyLeader) {
       let timerID = setInterval(async () => {
@@ -75,7 +70,7 @@ export class GameGateway {
           countDown--;
         } else {
           game.isOpen = false;
-          game = await game.save();
+          game = await this.gameService.updateGame(game.id, game);
           this.server.to(payload.gameID).emit('update-game', game);
           this.startGameClock(payload.gameID);
           clearInterval(timerID);
@@ -87,9 +82,9 @@ export class GameGateway {
   @SubscribeMessage('join-game')
   async joinGame(client: Socket, payload: JoinGamePayload): Promise<void> {
     try {
-      let game = await this.gameService.readById(payload.gameID);
+      let game = await this.gameService.getGameById(payload.gameID);
       if (game.isOpen) {
-        const gameID = game._id.toString();
+        const gameID = game.id;
         client.join(gameID);
 
         let player = new Player({
@@ -98,7 +93,7 @@ export class GameGateway {
         });
 
         game.players.push(player);
-        game = await this.gameService.update(game._id, game);
+        game = await this.gameService.updateGame(game.id, game);
         this.server.to(gameID).emit('update-game', game);
       }
     } catch (err) {
@@ -107,9 +102,9 @@ export class GameGateway {
   }
 
   private async startGameClock(gameID: string): Promise<void> {
-    let game = await this.gameService.readById(gameID);
+    let game = await this.gameService.getGameById(gameID);
     game.startTime = new Date().getTime();
-    game = await this.gameService.update(game._id, game);
+    game = await this.gameService.updateGame(game.id, game);
 
     let time = 120;
 

@@ -1,11 +1,14 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
-import { Player } from './player.schema';
+import { Player } from '../players/player.schema';
 
 export type GameDocument = Game & Document;
 
 @Schema()
-export class Game extends Document {
+export class Game {
+  @Prop()
+  id: string;
+
   @Prop([String])
   words: string[];
 

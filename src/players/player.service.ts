@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Player, PlayerDocument } from '../schemas/player.schema';
+import { Player, PlayerDocument } from './player.schema';
 
 @Injectable()
 export class PlayerService {
